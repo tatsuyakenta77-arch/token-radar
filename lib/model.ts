@@ -1,10 +1,17 @@
 // The token radar's model: one sealed snapshot in, one ranked board out.
 //
-// The board ranks every protocol the snapshot can rank: pre-token (its record
-// carries no market cap, no CoinGecko id and no symbol), not an exchange, and
-// not a versioned pool of another protocol. The watchlist is the floor — all
-// 40 of its slugs are ranked — and every other rankable protocol below the
-// floor is ranked too: the early rows the radar exists to find.
+// The board ranks the protocols the snapshot can rank as launch candidates:
+// pre-token (its record carries no market cap, no CoinGecko id and no
+// symbol), and not a wrapped, staked or bridged product of a protocol whose
+// token already trades. That second rule is the watchlist's own rule, applied
+// at every TVL instead of only above the floor: the category is not Bridge,
+// Canonical Bridge, Liquid Staking, Liquid Restaking, Restaked BTC or CEX,
+// the name ends in no version marker and carries no whole word wrapped,
+// staked or staking, and it begins with no exchange's name. The watchlist is
+// the floor — all 40 of its slugs are ranked — and every other protocol the
+// rule keeps, below the floor, is ranked too: the early rows the radar
+// exists to find. No protocol name is ever special-cased: the same rule and
+// the same function score every row.
 //
 // Implied value is calibrated, not asserted. The live-token protocols in the
 // same snapshot tell the market's own price for a dollar of TVL: for each
@@ -19,8 +26,7 @@
 //   tenure    0.6 + 0.4 x min(age_days, 730) / 730   (age unknown: 365)
 //   breadth   1 + 0.01 x min(chains - 1, 10), at most 1.10
 //
-// No protocol name is ever special-cased: the same function scores every row,
-// and the multiples themselves come from the snapshot's own live protocols.
+// The multiples themselves come from the snapshot's own live protocols.
 // The live-token set is kept apart from the ranking and shown with the
 // market's own values, never mixed into the board.
 
@@ -236,9 +242,24 @@ export function isPreToken(p: SnapshotProtocol): boolean {
 /** DefiLlama's version-marker rule: a name ending in a release is a pool of another protocol. */
 const VERSIONED = /\s(V\d+(\.\d+)?|v\d+(\.\d+)?|\d+\.\d+)$/;
 
-/** Whether a protocol is one the board may rank: pre-token, not an exchange, not a versioned pool. */
+/**
+ * The watchlist's own rule, applied at every TVL: categories that name a
+ * wrapped, staked or bridged product, names that carry a whole word wrapped,
+ * staked or staking, and names that begin with an exchange's name are set
+ * aside, because each is a product of a token that already trades rather
+ * than a protocol still to launch one.
+ */
+const EXCLUDED_CATEGORIES = new Set(['Bridge', 'Canonical Bridge', 'Liquid Staking', 'Liquid Restaking', 'Restaked BTC', 'CEX']);
+const WRAPPED_WORD = /\b(wrapped|staked|staking)\b/i;
+const EXCHANGE_PREFIXES = ['Binance', 'Coinbase', 'Bybit', 'Kraken', 'Bitget', 'OKX', 'Bitfinex', 'Gemini'];
+
+/** Whether a protocol is one the board may rank: pre-token, and the watchlist's rule keeps it. */
 export function isRankable(p: SnapshotProtocol): boolean {
-  return isPreToken(p) && p.category !== 'CEX' && !VERSIONED.test(p.name);
+  if (!isPreToken(p)) return false;
+  if (p.category !== null && EXCLUDED_CATEGORIES.has(p.category)) return false;
+  if (VERSIONED.test(p.name)) return false;
+  if (WRAPPED_WORD.test(p.name)) return false;
+  return !EXCHANGE_PREFIXES.some((exchange) => p.name.startsWith(exchange));
 }
 
 /**

@@ -95,7 +95,7 @@ if (!dashboardFiles.some((f) => f.endsWith('.js'))) fail('dashboard/ holds no .j
 
 const shots = copyTree(join(here, 'screenshots'), join(out, 'screenshots'));
 if (shots.length < 3 || shots.length > 4) {
-  fail(`screenshots/ holds ${shots.length} image${shots.length === 1 ? '' : 's'}: hand in 3 or 4, the board, a detail view and a filtered view`);
+  fail(`screenshots/ holds ${shots.length} image${shots.length === 1 ? '' : 's'}: hand in 3 or 4, the board, a detail view and the model panel`);
 }
 
 // The dossier is written last: the scorer rebuilds it from this /output and compares bytes.
